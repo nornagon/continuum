@@ -186,4 +186,4 @@ window.onresize = ->
 window.onkeydown = (e) ->
   if e.which == 'T'.charCodeAt(0)
     setScrollX leftForDay(moment(origin).startOf('week').subtract('week', 1))
-    updateReifiedDays()
+    updateReified()
