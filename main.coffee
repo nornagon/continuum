@@ -43,6 +43,15 @@ class Layer extends ElementWrapper
     view.layer = @
     @$el.insertBefore view.$el, @$el.firstChild
     view
+  addBeforeFirst: (view, cond) ->
+    for v,i in @views
+      if cond v
+        break
+    console.log v, i
+    view.layer = @
+    @$el.insertBefore view.$el, v?.$el
+    @views.splice i, 0, view
+    view
   remove: (view) ->
     @$el.removeChild view.$el
     @views = (v for v in @views when v isnt view)
@@ -52,13 +61,21 @@ class Layer extends ElementWrapper
 # generates it.
 class View extends ElementWrapper
   constructor: (@render) ->
+    @handlers = {}
     @$el = @render()
   refresh: ->
     newEl = @render()
+    for e of @handlers
+      for f in e
+        newEl.addEventListener ev, f
     @$el.parentNode?.replaceChild(newEl, @$el)
     @$el = newEl
   remove: ->
     @layer?.remove @
+
+  on: (ev, fn) ->
+    (@handlers[ev] ||= []).push fn
+    @$el.addEventListener ev, fn
 
 doMonthBounce = no
 
@@ -93,16 +110,30 @@ posForDay = (m) ->
 
 month = (m) ->
   new View ->
-    tag '.month', m.format('MMMM')
+    tag '.month', m.format('MMMM YYYY')
 posForMonth = (m) ->
   left: leftForDay(m)
   top: 40
 
+annotation = ->
+  new View ->
+    e = tag '.annotation'
+    e.style.height = '150px'
+    @contents = e.appendChild tag '.content', 'event'
+    e
+
+
 days = new Layer '.days'
 days.setPos top: 300 + (if doMonthBounce then 100 else 0)
-calendar.appendChild days.$el
 months = new Layer
-calendar.appendChild months.$el
+annotations = new Layer
+annotations.setPos top: 300 + (if doMonthBounce then 100 else 0)
+
+calendar.appendChild l.$el for l in [
+  annotations
+  days
+  months
+]
 
 origin = moment().startOf('day')
 sx = 0
@@ -115,12 +146,20 @@ setScrollX leftForDay(moment(origin).startOf('week').subtract('week', 1))
 
 leftmostReifiedDay = moment(origin)
 numReifiedDays = 0
-reifyDay = (m) ->
-  d = day(m)
-  if m.isSame(moment(), 'day')
+reifyDay = (mom) ->
+  d = day(mom)
+  if mom.isSame(moment(), 'day')
     d.$el.classList.add 'today'
-  d.setPos posForDay(m)
+  d.setPos posForDay(mom)
+  d.on 'click', ->
+    a = annotation()
+    a.moment = mom
+    p = posForDay(mom)
+    p.left += 25; p.top += 51
+    a.setPos p
+    annotations.addBeforeFirst a, (x) -> x.moment.isAfter(a.moment)
   d
+
 
 updateReifiedDays = ->
   # TODO: total re-render if overlap is small
@@ -139,7 +178,7 @@ updateReifiedDays = ->
     days.views[0].remove()
     numReifiedDays--
     leftmostReifiedDay.add('day', 1)
-  while numReifiedDays*50 > innerWidth+100
+  while leftForDay(moment(leftmostReifiedDay).add('day', numReifiedDays-1)) > sx + innerWidth
     days.views[days.views.length-1].remove()
     numReifiedDays--
 
