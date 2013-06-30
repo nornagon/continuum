@@ -1,0 +1,137 @@
+<!doctype html>
+<html>
+  <head>
+    <link rel='stylesheet' href='style.css'>
+    <script src='assets/moment.js'></script>
+  </head>
+  <body>
+    <div id='calendar'>
+    </div>
+    <script src='main.js'></script>
+  </body>
+</html>
+<script>
+function makeExpandingArea(area) {
+  var container = document.createElement('div');
+  container.className = 'expandingArea';
+  var pre = container.appendChild(document.createElement('pre'))
+  var span = pre.appendChild(document.createElement('span'));
+  pre.appendChild(document.createElement('br'));
+  area.parentNode.insertBefore(container, area);
+  container.appendChild(area);
+  area.addEventListener('input', function() {
+    span.textContent = area.value;
+  }, false);
+  span.textContent = area.value;
+  container.className += ' active';
+  return container;
+}
+</script>
+    <script>
+      /*
+      Element.prototype.rect = function() {
+        var r = this.getBoundingClientRect()
+        var d = this.ownerDocument.documentElement
+        var w = this.ownerDocument.defaultView
+        var l = (w.pageXOffset || d.scrollLeft) - d.clientLeft
+        var t = (w.pageYOffset || d.scrollTop) - d.clientTop
+        return {
+          left: r.left + l,
+          top: r.top + t,
+          right: r.right + l,
+          bottom: r.bottom + t,
+          width: r.width,
+          height: r.height
+        }
+      }
+      function highestBoxBotBetween(x1,x2) {
+        var bs = document.querySelectorAll('.box')
+        var y = -Infinity
+        for (var i = 0; i < bs.length; i++) {
+          var b = bs[i];
+          var r = b.rect();
+          if (r.left <= x2 && r.right >= x1) {
+            y = Math.max(y, r.bottom);
+          }
+        }
+        return y;
+      }
+      var dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+      'Friday', 'Saturday']
+      var shortDayNames = "Sun Mon Tue Wed Thu Fri Sat".split(/ /);
+      function boxForDay(i) {
+        var top = 0;
+        var dayNum = i % 7;
+        if (dayNum > 0 && dayNum < 6)
+          top = 15-Math.sin(dayNum/6*Math.PI)*80;
+        var left = i*50;
+        return {top:top, left:left, bottom:top+51}
+      }
+      for (var i = 0; i < 35; i++) {
+        var day = days.appendChild(document.createElement('div'))
+        day.className = 'day'
+        if (i == 8) day.classList.add('today')
+        if (Math.random() < 0.1) day.classList.add('event')
+        var b = boxForDay(i);
+        day.style.top = b.top + 'px';
+        day.style.left = b.left + 'px';
+        day.textContent = shortDayNames[i % 7]
+        var num = day.appendChild(document.createElement('div'))
+        num.className = 'number'
+        var date = i+16
+        if (date > 30) date -= 30;
+        num.textContent = date
+        day.num = i
+        day.onclick = function() {
+          var i = this.num;
+          var dbot = boxForDay(i).bottom+300;
+          var x = boxForDay(i).left + 25;
+          var h = Math.max(dbot+170, highestBoxBotBetween(x,x+150))-dbot;
+          var d = detailsForDay(i, '')
+          d.style.height = '0px'
+          setTimeout(function() {
+            d.style.height = h + 'px'
+          })
+          var ta = d.firstChild.firstChild.appendChild(document.createElement('textarea'))
+          makeExpandingArea(ta);
+          ta.focus();
+          ta.addEventListener('input', function() {
+            d.style.webkitTransition = 'none'
+            d.style.height = h - 20 + ta.getBoundingClientRect().height + 'px'
+          }, false);
+        }
+      }
+      function detailsForDay(i, text) {
+        var details = events.appendChild(document.createElement('div'))
+        details.className = 'details'
+        details.style.height = '150px'
+        var detCont = details.appendChild(document.createElement('div'))
+        detCont.className = 'content'
+        var detBox = detCont.appendChild(document.createElement('div'))
+        detBox.className = 'box'
+        detBox.textContent = text
+        var b = boxForDay(i);
+        details.style.top = b.top + 50 + 'px';
+        details.style.left = b.left+25 + 'px';
+        details.text = detBox
+        return details;
+      }
+
+      var d = detailsForDay(10, 'Telstra payment due')
+      d.style.height = '250px'
+      detailsForDay(11, '930 Visa appointment')
+      detailsForDay(17, 'Flight out')
+      detailsForDay(8, 'Hang out with Jenna')
+      var d = detailsForDay(9, 'See Kath')
+      d.style.height = '120px'
+
+
+      d = calendar.appendChild(document.createElement('div'))
+      d.className = 'span-event'
+      d.style.width = '100px'
+      d.textContent = 'Canberra'
+      d.style.position = 'absolute'
+      d.style.left = boxForDay(6).left + 25 + 'px'
+      d.style.top = '-130px'
+      */
+    </script>
