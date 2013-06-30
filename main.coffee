@@ -30,9 +30,9 @@ class ElementWrapper
 
 # Layers contain Views.
 class Layer extends ElementWrapper
-  constructor: (className) ->
+  constructor: (className = '') ->
     @views = []
-    @$el = tag className
+    @$el = tag className + '.layer'
   add: (view) ->
     @views.push view
     view.layer = @
@@ -64,8 +64,7 @@ doMonthBounce = no
 
 day = (m) ->
   new View ->
-    d = tag '.day'
-    d.appendChild textNode m.format('ddd')
+    d = tag '.day', m.format('ddd')
     num = d.appendChild tag '.number', m.format('D')
     d
 
@@ -79,7 +78,7 @@ topForDay = (m) ->
     Math.round(15 - Math.sin(i/6 * Math.PI) * 80)
   else 0
   if doMonthBounce
-    j = m.date()/m.endOf('month').date()
+    j = m.date()/m.daysInMonth()
     monthBounce = -Math.sin(j*Math.PI) * 150
     v + monthBounce
   else
@@ -92,17 +91,25 @@ posForDay = (m) ->
   left: leftForDay(m)
   top: topForDay(m)
 
-daysParent = new Layer '.days'
-days = daysParent.add new Layer '.origin'
+month = (m) ->
+  new View ->
+    tag '.month', m.format('MMMM')
+posForMonth = (m) ->
+  left: leftForDay(m)
+  top: 40
+
+days = new Layer '.days'
 days.setPos top: 300 + (if doMonthBounce then 100 else 0)
-calendar.appendChild daysParent.$el
+calendar.appendChild days.$el
+months = new Layer
+calendar.appendChild months.$el
 
 origin = moment().startOf('day')
 sx = 0
 
 setScrollX = (x) ->
   sx = x
-  days.$el.style.webkitTransform = 'translateX('+-sx+'px)'
+  calendar.style.webkitTransform = 'translateX('+-sx+'px)'
 
 setScrollX leftForDay(moment(origin).startOf('week').subtract('week', 1))
 
@@ -116,8 +123,9 @@ reifyDay = (m) ->
   d
 
 updateReifiedDays = ->
+  # TODO: total re-render if overlap is small
   while leftForDay(leftmostReifiedDay) > sx
-    m = moment(leftmostReifiedDay).add('days',-1)
+    m = moment(leftmostReifiedDay).add('days', -1)
     d = reifyDay m
     days.addBegin d
     leftmostReifiedDay = m
@@ -127,7 +135,7 @@ updateReifiedDays = ->
     d = reifyDay m
     days.add d
     numReifiedDays++
-  while leftForDay(leftmostReifiedDay) + 50 < sx
+  while leftForDay(moment(leftmostReifiedDay).add('day', 1)) < sx
     days.views[0].remove()
     numReifiedDays--
     leftmostReifiedDay.add('day', 1)
@@ -135,15 +143,45 @@ updateReifiedDays = ->
     days.views[days.views.length-1].remove()
     numReifiedDays--
 
-updateReifiedDays()
+reifyMonth = (m) ->
+  d = month(m)
+  d.setPos posForMonth(m)
+  d
+leftmostReifiedMonth = moment(leftmostReifiedDay).startOf('month')
+numReifiedMonths = 0
+updateReifiedMonths = ->
+  while leftForDay(leftmostReifiedMonth) > sx
+    m = moment(leftmostReifiedMonth).add('months', -1)
+    d = reifyMonth m
+    months.addBegin d
+    leftmostReifiedMonth = m
+    numReifiedMonths++
+  while leftForDay(moment(leftmostReifiedMonth).add('month', numReifiedMonths)) < sx + innerWidth
+    m = moment(leftmostReifiedMonth).add('months', numReifiedMonths)
+    d = reifyMonth m
+    months.add d
+    numReifiedMonths++
+  while leftForDay(moment(leftmostReifiedMonth).add('month', 1)) < sx
+    months.views[0].remove()
+    numReifiedMonths--
+    leftmostReifiedMonth.add 'month', 1
+  while leftForDay(moment(leftmostReifiedMonth).add('month', numReifiedMonths-1)) > sx + innerWidth
+    months.views[months.views.length-1].remove()
+    numReifiedMonths--
+
+updateReified = ->
+  updateReifiedDays()
+  updateReifiedMonths()
+
+updateReified()
 
 window.onmousewheel = (e) ->
-  setScrollX sx-e.wheelDeltaX
-  updateReifiedDays()
   e.preventDefault()
+  setScrollX sx-e.wheelDeltaX
+  updateReified()
 
 window.onresize = ->
-  updateReifiedDays()
+  updateReified()
 
 window.onkeydown = (e) ->
   if e.which == 'T'.charCodeAt(0)
