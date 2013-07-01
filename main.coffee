@@ -60,7 +60,8 @@ class Layer extends ElementWrapper
 # A View is a description of an HTML element in terms of a function which
 # generates it.
 class View extends ElementWrapper
-  constructor: (@render) ->
+  constructor: (render) ->
+    @render = render if render?
     @handlers = {}
     @$el = @render()
   refresh: ->
@@ -115,13 +116,35 @@ posForMonth = (m) ->
   left: leftForDay(m)
   top: 40
 
-annotation = ->
-  new View ->
+class AnnotationView extends View
+  constructor: (value = '') ->
+    super
+    @textArea.value = value
+  render: ->
     e = tag '.annotation'
-    e.style.height = '150px'
-    @contents = e.appendChild tag '.content', 'event'
+    @content = e.appendChild tag '.content'
+    @edit()
+    @content.onclick = =>
+      @edit()
     e
+  edit: ->
+    return if @editing
+    value = @content.textContent
+    @content.textContent = ''
+    @textArea = @content.appendChild tag 'textarea', value
+    @textArea.style.minWidth = '20px'
+    makeExpandingArea @textArea
+    @textArea.onblur = => @doneEditing()
+    @textArea.focus()
+    @editing = true
+  doneEditing: ->
+    return unless @editing
+    value = @textArea.value
+    @content.textContent = value
+    @editing = false
 
+annotation = ->
+  new AnnotationView
 
 days = new Layer '.days'
 days.setPos top: 300 + (if doMonthBounce then 100 else 0)
@@ -152,13 +175,25 @@ reifyDay = (mom) ->
     d.$el.classList.add 'today'
   d.setPos posForDay(mom)
   d.on 'click', ->
-    a = annotation()
-    a.moment = mom
-    p = posForDay(mom)
-    p.left += 25; p.top += 51
-    a.setPos p
-    annotations.addBeforeFirst a, (x) -> x.moment.isAfter(a.moment)
+    addAnnotation mom
   d
+
+addAnnotation = (mom) ->
+  a = annotation()
+  a.moment = mom
+  p = posForDay(mom)
+  p.left += 25; p.top += 51
+  a.setPos p
+  lineHeight = 20
+  minY = p.top + 150 - lineHeight
+  for ann in annotations.views
+    w = ann.$el.offsetWidth
+    l = ann.$el.offsetLeft
+    if l < p.left + 100 and l+w >= p.left
+      minY = Math.max(minY, ann.$el.offsetTop+ann.$el.offsetHeight)
+  a.setSize height: minY - p.top + lineHeight
+  annotations.addBeforeFirst a, (x) -> x.moment.isAfter(a.moment)
+  a.textArea.focus()
 
 
 updateReifiedDays = ->
