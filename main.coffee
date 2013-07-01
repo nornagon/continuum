@@ -216,6 +216,7 @@ reifyDay = (mom) ->
 
 minHeightForAnnotation = (a) ->
   minY = a.$el.offsetTop + 150
+  maxY = Infinity
   p =
     left: a.$el.offsetLeft
     width: a.content.offsetWidth
@@ -224,7 +225,11 @@ minHeightForAnnotation = (a) ->
     l = ann.$el.offsetLeft
     if l < p.left + p.width and l+w >= p.left
       minY = Math.max(minY, ann.$el.offsetTop+ann.$el.offsetHeight)
-  minY - a.$el.offsetTop
+      maxY = Math.min(maxY, ann.content.offsetTop + ann.$el.offsetTop)
+  if maxY isnt Infinity and maxY - a.content.offsetHeight >= a.$el.offsetTop + 150
+    maxY - a.$el.offsetTop - a.content.offsetHeight
+  else
+    minY - a.$el.offsetTop
 
 addAnnotation = (mom) ->
   a = annotation()
