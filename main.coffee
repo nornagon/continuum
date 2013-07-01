@@ -158,11 +158,20 @@ class AnnotationView extends View
   doneEditing: ->
     return unless @editing
     value = @textArea.value
+    if value.length is 0
+      @fadeOut()
+      return
     @content.textContent = value
     @editing = false
 
   setHeight: (height) ->
     @spacer.style.height = height + 'px'
+
+  fadeOut: ->
+    @spacer.style.height = '0px'
+    @spacer.style.webkitTransition = '200ms ease-in'
+    @spacer.addEventListener 'webkitTransitionEnd', =>
+      @remove()
 
 annotation = ->
   new AnnotationView
