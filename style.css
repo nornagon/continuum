@@ -4,6 +4,16 @@ html {
   overflow: hidden;
 }
 html, body { margin: 0; }
+
+#calendar {
+  position: absolute;
+  top: 0px;
+}
+
+.layer {
+  position: absolute;
+}
+
 .day {
   position: absolute;
   width: 51px;
@@ -37,11 +47,6 @@ html, body { margin: 0; }
   color: hsla(0,0%,0%,0.2);
 }
 
-#calendar {
-  position: absolute;
-  top: 0px;
-}
-
 .month {
   position: absolute;
   font-size: 29px;
@@ -51,46 +56,6 @@ html, body { margin: 0; }
   text-shadow: 0px 1px hsl(0, 0%, 70%);
   white-space: nowrap;
 }
-
-@font-face {
-  font-family: 'fabricaregular';
-  src: url('assets/fabrica-webfont.eot');
-  src: url('assets/fabrica-webfont.eot?#iefix') format('embedded-opentype'),
-  url('assets/fabrica-webfont.woff') format('woff'),
-  url('assets/fabrica-webfont.ttf') format('truetype'),
-  url('assets/fabrica-webfont.svg#fabricaregular') format('svg');
-  font-weight: normal;
-  font-style: normal;
-
-}
-
-/*.details {
-  border-left: 1px solid #999;
-  /border-bottom: 1px solid #999;
-  position: absolute;
-  display: table;
-  width: 100px;
-  -webkit-transition: 300ms;
-  -webkit-transition-timing-function: cubic-bezier(0.465, 1.505, 0.670, 1.065); 
-  transition-timing-function: cubic-bezier(0.465, 1.505, 0.670, 1.065); 
-}
-.details .content {
-  padding: 3px;
-  display: table-cell;
-  vertical-align: bottom;
-  /text-shadow: 0px 1px white, 0px -1px white, 0px 2px white, 0px -2px white;
-}
-.details .box {
-  background: white;
-}
-
-.span-event {
-  position: absolute;
-  box-sizing: border-box;
-  padding: 2px;
-  padding-left: 4px;
-  border-bottom: 5px solid #999;
-}*/
 
 .annotation {
   border-left: 1px solid #999;
@@ -102,6 +67,28 @@ html, body { margin: 0; }
   bottom: 0;
   padding-left: 3px;
   background: white;
+}
+
+@font-face {
+  font-family: 'fabricaregular';
+  src: url('assets/fabrica-webfont.eot');
+  src: url('assets/fabrica-webfont.eot?#iefix') format('embedded-opentype'),
+       url('assets/fabrica-webfont.woff') format('woff'),
+       url('assets/fabrica-webfont.ttf') format('truetype'),
+       url('assets/fabrica-webfont.svg#fabricaregular') format('svg');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Alegreya';
+  src: url('assets/Alegreya-Bold-webfont.eot');
+  src: url('assets/Alegreya-Bold-webfont.eot?#iefix') format('embedded-opentype'),
+       url('assets/Alegreya-Bold-webfont.woff') format('woff'),
+       url('assets/Alegreya-Bold-webfont.ttf') format('truetype'),
+       url('assets/Alegreya-Bold-webfont.svg#AlegreyaBold') format('svg');
+  font-weight: bold;
+  font-style: normal;
 }
 
 textarea, 
@@ -157,8 +144,4 @@ pre {
   display: block;
   /* Hide the text; just using it for sizing */
   visibility: hidden;
-}
-
-.layer {
-  position: absolute;
 }
