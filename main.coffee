@@ -57,11 +57,13 @@ class Layer extends ElementWrapper
     @$el.insertBefore view.$el, @$el.firstChild
     view
   addBeforeFirst: (view, cond) ->
+    viewToInsertBefore = null
     for v,i in @views
       if cond v
+        viewToInsertBefore = v
         break
     view.layer = @
-    @$el.insertBefore view.$el, v?.$el
+    @$el.insertBefore view.$el, viewToInsertBefore?.$el
     @views.splice i, 0, view
     view
   remove: (view) ->
@@ -230,7 +232,7 @@ addAnnotation = (mom) ->
   p = posForDay(mom)
   p.left += 25; p.top += 51
   a.setPos p
-  annotations.addBeforeFirst a, (x) -> x.moment.isAfter(a.moment)
+  annotations.addBeforeFirst a, (x) -> x.moment.isBefore(a.moment)
   minY = minHeightForAnnotation a
   setTimeout ->
     a.setHeight minY
