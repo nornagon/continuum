@@ -60,7 +60,6 @@ class Layer extends ElementWrapper
     for v,i in @views
       if cond v
         break
-    console.log v, i
     view.layer = @
     @$el.insertBefore view.$el, v?.$el
     @views.splice i, 0, view
@@ -147,12 +146,17 @@ class AnnotationView extends View
     return if @editing
     value = @content.textContent
     @content.textContent = ''
-    @textArea = @content.appendChild tag 'textarea', value
+    @textArea = @content.appendChild tag 'textarea'
+    @textArea.value = value
     @textArea.style.minWidth = '20px'
     makeExpandingArea @textArea
     @textArea.onblur = => @doneEditing()
     @textArea.addEventListener 'input', =>
       @setHeight minHeightForAnnotation @
+    @textArea.addEventListener 'keydown', (e) =>
+      if e.which is 13 and not e.shiftKey
+        e.preventDefault()
+        @doneEditing()
     @textArea.focus()
     @editing = true
   doneEditing: ->

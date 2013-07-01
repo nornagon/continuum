@@ -69,6 +69,7 @@ html, body { margin: 0; }
   background: white;
   display: inline-block;
   pointer-events: auto;
+  white-space: pre-wrap;
 }
 
 @font-face {
