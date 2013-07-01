@@ -16,7 +16,20 @@ tag = (name, text) ->
   element.innerText = text if text
   element
 
-textNode = (text) -> document.createTextNode text
+makeExpandingArea = (area) ->
+  container = document.createElement('div')
+  container.className = 'expandingArea'
+  pre = container.appendChild(document.createElement('pre'))
+  span = pre.appendChild(document.createElement('span'))
+  pre.appendChild(document.createElement('br'))
+  area.parentNode.insertBefore(container, area)
+  container.appendChild(area)
+  area.addEventListener 'input', ->
+    span.textContent = area.value
+  , false
+  span.textContent = area.value
+  container.className += ' active'
+  return container
 
 class ElementWrapper
   setPos: (r) ->
@@ -122,6 +135,9 @@ class AnnotationView extends View
     @textArea.value = value
   render: ->
     e = tag '.annotation'
+    @spacer = e.appendChild tag 'div'
+    @spacer.style.width = '0px'
+    @spacer.style.webkitTransition = '200ms'
     @content = e.appendChild tag '.content'
     @edit()
     @content.onclick = =>
@@ -135,6 +151,8 @@ class AnnotationView extends View
     @textArea.style.minWidth = '20px'
     makeExpandingArea @textArea
     @textArea.onblur = => @doneEditing()
+    @textArea.addEventListener 'input', =>
+      @setHeight minHeightForAnnotation @
     @textArea.focus()
     @editing = true
   doneEditing: ->
@@ -142,6 +160,9 @@ class AnnotationView extends View
     value = @textArea.value
     @content.textContent = value
     @editing = false
+
+  setHeight: (height) ->
+    @spacer.style.height = height + 'px'
 
 annotation = ->
   new AnnotationView
@@ -178,21 +199,28 @@ reifyDay = (mom) ->
     addAnnotation mom
   d
 
+minHeightForAnnotation = (a) ->
+  minY = a.$el.offsetTop + 150
+  p =
+    left: a.$el.offsetLeft
+    width: a.content.offsetWidth
+  for ann in annotations.views when ann isnt a
+    w = ann.content.offsetWidth
+    l = ann.$el.offsetLeft
+    if l < p.left + p.width and l+w >= p.left
+      minY = Math.max(minY, ann.$el.offsetTop+ann.$el.offsetHeight)
+  minY - a.$el.offsetTop
+
 addAnnotation = (mom) ->
   a = annotation()
   a.moment = mom
   p = posForDay(mom)
   p.left += 25; p.top += 51
   a.setPos p
-  lineHeight = 20
-  minY = p.top + 150 - lineHeight
-  for ann in annotations.views
-    w = ann.$el.offsetWidth
-    l = ann.$el.offsetLeft
-    if l < p.left + 100 and l+w >= p.left
-      minY = Math.max(minY, ann.$el.offsetTop+ann.$el.offsetHeight)
-  a.setSize height: minY - p.top + lineHeight
   annotations.addBeforeFirst a, (x) -> x.moment.isAfter(a.moment)
+  minY = minHeightForAnnotation a
+  setTimeout ->
+    a.setHeight minY
   a.textArea.focus()
 
 

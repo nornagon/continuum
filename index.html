@@ -12,19 +12,4 @@
   </body>
 </html>
 <script>
-function makeExpandingArea(area) {
-  var container = document.createElement('div');
-  container.className = 'expandingArea';
-  var pre = container.appendChild(document.createElement('pre'))
-  var span = pre.appendChild(document.createElement('span'));
-  pre.appendChild(document.createElement('br'));
-  area.parentNode.insertBefore(container, area);
-  container.appendChild(area);
-  area.addEventListener('input', function() {
-    span.textContent = area.value;
-  }, false);
-  span.textContent = area.value;
-  container.className += ' active';
-  return container;
-}
 </script>
