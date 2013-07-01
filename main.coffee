@@ -246,6 +246,9 @@ updateReifiedMonths = ->
 updateReified = ->
   updateReifiedDays()
   updateReifiedMonths()
+  displayingMostlyMonth = dayForWorldX(sx+innerWidth/2)
+  document.title = displayingMostlyMonth.format('MMMM YYYY') + ' - Continuum'
+  # TODO: favicon with current date
 
 updateReified()
 
