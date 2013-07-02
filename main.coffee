@@ -80,9 +80,9 @@ class View extends ElementWrapper
     @$el = @render()
   refresh: ->
     newEl = @render()
-    for e of @handlers
-      for f in e
-        newEl.addEventListener ev, f
+    for e,fs of @handlers
+      for f in fs
+        newEl.addEventListener e, f
     @$el.parentNode?.replaceChild(newEl, @$el)
     @$el = newEl
   remove: ->
@@ -95,10 +95,21 @@ class View extends ElementWrapper
 doMonthBounce = no
 
 day = (m) ->
-  new View ->
+  v = new View ->
+    @isToday = m.isSame(moment(), 'day')
+    if @$el
+      if @isToday
+        @$el.classList.add 'today'
+      else
+        @$el.classList.remove 'today'
+      return @$el
     d = tag '.day', m.format('ddd')
     num = d.appendChild tag '.number', m.format('D')
+    if @isToday
+      d.classList.add 'today'
     d
+  v.moment = m
+  v
 
 dayForWorldX = (x) ->
   moment(origin).add('days', x/50|0)
@@ -207,8 +218,6 @@ leftmostReifiedDay = moment(origin)
 numReifiedDays = 0
 reifyDay = (mom) ->
   d = day(mom)
-  if mom.isSame(moment(), 'day')
-    d.$el.classList.add 'today'
   d.setPos posForDay(mom)
   d.on 'click', ->
     addAnnotation mom
@@ -308,7 +317,26 @@ window.onmousewheel = (e) ->
 window.onresize = ->
   updateReified()
 
-window.onkeydown = (e) ->
+document.addEventListener 'keydown', (e) ->
+  return if document.activeElement.tagName isnt 'BODY'
   if e.which == 'T'.charCodeAt(0)
     setScrollX leftForDay(moment(origin).startOf('week').subtract('week', 1))
     updateReified()
+, false
+
+everyMinute = ->
+  for d in days.views
+    if d.isToday != d.moment.isSame(moment(), 'day')
+      d.refresh()
+  return
+
+do ->
+  timeUntilNextMinute = ->
+    now = moment()
+    moment(now).endOf('minute').diff(now) + 50
+  f = ->
+    setTimeout ->
+      everyMinute()
+      f()
+    , timeUntilNextMinute()
+  f()
