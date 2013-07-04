@@ -80,11 +80,12 @@ class View extends ElementWrapper
     @$el = @render()
   refresh: ->
     newEl = @render()
-    for e,fs of @handlers
-      for f in fs
-        newEl.addEventListener e, f
-    @$el.parentNode?.replaceChild(newEl, @$el)
-    @$el = newEl
+    if newEl isnt @$el
+      for e,fs of @handlers
+        for f in fs
+          newEl.addEventListener e, f
+      @$el.parentNode?.replaceChild(newEl, @$el)
+      @$el = newEl
   remove: ->
     @layer?.remove @
 
