@@ -12,5 +12,8 @@
     "consolidate": "*",
     "level": "*",
     "cradle": "*"
+  },
+  "scripts": {
+    "install": "coffee -c static"
   }
 }
