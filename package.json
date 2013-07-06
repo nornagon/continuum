@@ -1,0 +1,16 @@
+{
+  "name": "continuum",
+  "version": "0.0.0",
+  "description": "time becomes space",
+  "private": true,
+  "homepage": "",
+  "author": "Jeremy Apthorp <nornagon@nornagon.net>",
+  "dependencies": {
+    "express": "~3.x",
+    "toffee": "*",
+    "request": "*",
+    "consolidate": "*",
+    "level": "*",
+    "cradle": "*"
+  }
+}
