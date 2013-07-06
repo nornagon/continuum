@@ -1,0 +1,37 @@
+<!doctype html>
+<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="persona-buttons.css" />
+<script src="https://login.persona.org/include.js"></script>
+
+<body>
+  <div id='main'>
+    <h1>Oh hai. </h1>
+    <a id="loginbtn" class="persona-button"><span>Sign in</span></a>
+    <form action='/auth' method='POST'>
+      <input id='assfield' type='hidden' name='assertion' value='' />
+      <input type='hidden' name='_csrf' value='#{csrf}' />
+    </form>
+
+<script>
+  document.getElementById('loginbtn').onclick = function() {
+    navigator.id.request({siteName:'continuum'})
+  };
+
+  var onlogin = function(assertion) { 
+    console.log('onlogin');
+    assfield.value = assertion;
+    document.forms[0].submit();
+  };
+
+  var onlogout = function() {
+    console.log('logout');
+  };
+
+  var currentUser = #{json user}
+  navigator.id.watch({
+    loggedInUser:currentUser,
+    onlogin:onlogin,
+    onlogout:onlogout
+  });
+
+</script>

@@ -143,21 +143,20 @@ posForMonth = (m) ->
   top: 40
 
 class AnnotationView extends View
-  constructor: (value = '') ->
-    super
-    @textArea.value = value
+  constructor: (@data) ->
+    super()
+    @content.textContent = @data.text
   render: ->
     e = tag '.annotation'
     @spacer = e.appendChild tag 'div'
     @spacer.style.width = '0px'
-    @spacer.style.webkitTransition = '200ms'
     @content = e.appendChild tag '.content'
-    @edit()
     @content.onclick = =>
       @edit()
     e
   edit: ->
     return if @editing
+    @editing = true
     value = @content.textContent
     @content.textContent = ''
     @textArea = @content.appendChild tag 'textarea'
@@ -172,15 +171,17 @@ class AnnotationView extends View
         e.preventDefault()
         @doneEditing()
     @textArea.focus()
-    @editing = true
   doneEditing: ->
     return unless @editing
-    value = @textArea.value
+    @editing = false
+    value = @data.text = @textArea.value
     if value.length is 0
+      @delete()
       @fadeOut()
       return
+    else
+      @save()
     @content.textContent = value
-    @editing = false
 
   setHeight: (height) ->
     @spacer.style.height = height + 'px'
@@ -191,8 +192,82 @@ class AnnotationView extends View
     @spacer.addEventListener 'webkitTransitionEnd', =>
       @remove()
 
-annotation = ->
-  new AnnotationView
+  delete: ->
+    @enqueue (next) =>
+      if @data._id
+        xhr.delete '/annotations/'+@data._id, (err, d) =>
+          if err
+            alert 'wargh error, you should probs reload'
+            console.error err
+            return
+          next()
+
+  save: ->
+    @enqueue (next) =>
+      if @data._id
+        xhr.put '/annotations/'+@data._id, @data, (err, d) =>
+          if err
+            alert 'wargh error, you should probs reload'
+            console.error err
+            return
+          next()
+      else
+        xhr.post '/annotations', @data, (err, d) =>
+          if err
+            alert 'wargh error, you should probs reload'
+            console.error err
+            return
+          @data._id = d.id
+          next()
+
+  enqueue: (fn) ->
+    @queue ?= []
+    @queue.push fn
+    if not @inFlight
+      @popQueue()
+
+  popQueue: ->
+    if @queue.length
+      @inFlight = true
+      f = @queue.shift()
+      f => @popQueue()
+    else
+      @inFlight = false
+
+xhr =
+  query: (method, url, data, cb) ->
+    req = new XMLHttpRequest
+    req.onload = ->
+      try
+        cb null, JSON.parse this.responseText
+      catch e
+        cb e
+    req.open method, url, true
+    req.setRequestHeader 'Content-Type', 'application/json'
+    req.send data
+  get: (url, cb) ->
+    this.query 'get', url, undefined, cb
+  post: (url, data, cb) ->
+    this.query 'post', url, JSON.stringify(data), cb
+  put: (url, data, cb) ->
+    this.query 'put', url, JSON.stringify(data), cb
+  delete: (url, cb) ->
+    this.query 'delete', url, undefined, cb
+
+xhr.get '/annotations.json', (err, anns) ->
+  throw err if err
+  for a in anns
+    addAnnotation a
+
+createAnnotation = (ann, cb) ->
+  xhr.post '/annotations', ann, (err, data) ->
+    return cb err if err
+
+updateAnnotation = (ann, cb) ->
+  xhr.put '/annotations/'+ann._id, (err, data) ->
+
+annotation = (data) ->
+  new AnnotationView data
 
 days = new Layer '.days'
 days.setPos top: 300 + (if doMonthBounce then 100 else 0)
@@ -221,7 +296,7 @@ reifyDay = (mom) ->
   d = day(mom)
   d.setPos posForDay(mom)
   d.on 'click', ->
-    addAnnotation mom
+    newAnnotation mom
   d
 
 minHeightForAnnotation = (a) ->
@@ -241,17 +316,26 @@ minHeightForAnnotation = (a) ->
   else
     minY - a.$el.offsetTop
 
-addAnnotation = (mom) ->
-  a = annotation()
-  a.moment = mom
+addAnnotation = (data) ->
+  a = annotation data
+  mom = moment data.date, 'YYYY-MM-DD'
+  a.moment = mom # XXX hm
   p = posForDay(mom)
   p.left += 25; p.top += 51
   a.setPos p
   annotations.addBeforeFirst a, (x) -> x.moment.isBefore(a.moment)
   minY = minHeightForAnnotation a
+  a.setHeight minY
+  a
+
+newAnnotation = (mom) ->
+  a = addAnnotation text: '', date: mom.format('YYYY-MM-DD')
+  a.setHeight 0
+  a.edit()
+  a.spacer.style.webkitTransition = '200ms'
+  minY = minHeightForAnnotation a
   setTimeout ->
     a.setHeight minY
-  a.textArea.focus()
 
 
 updateReifiedDays = ->
