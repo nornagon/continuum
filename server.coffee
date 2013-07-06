@@ -76,6 +76,12 @@ app.get '/logout', session, (req, res, next) ->
 # the express.csrf() middleware, its injected into the hidden login form and then automatically
 # checked when the login form is submitted.
 app.get '/login', session, (req, res) ->
+  if app.get('env') is 'development' and config.dev_email
+    db.getUserForEmail config.dev_email, (err, user) ->
+      throw err if err
+      req.session.user = user
+      res.redirect '/'
+    return
   res.render 'login', csrf: req.session._csrf, user: req.session.user
 
 app.get '/', session, (req, res) ->
