@@ -446,6 +446,13 @@ window.onmousewheel = (e) ->
 window.onresize = ->
   updateReified()
 
+window.onscroll = (e) ->
+  dx = window.scrollX
+  window.scrollTo 0, 0
+  setScrollX sx+dx
+  updateReified()
+  e.preventDefault()
+
 document.addEventListener 'keydown', (e) ->
   return if document.activeElement.tagName isnt 'BODY'
   if e.which == 'T'.charCodeAt(0)
