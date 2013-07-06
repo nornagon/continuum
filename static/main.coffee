@@ -171,7 +171,6 @@ class NetQueue
     @retries = 0
 
   enqueue: (fn) ->
-    console.log 'enqueue'
     @queue.push fn
     if not @in_flight
       @popQueue()
