@@ -72,6 +72,33 @@ html, body { margin: 0; }
   white-space: pre-wrap;
 }
 
+.error {
+  position: fixed;
+  color: red;
+  -webkit-transition: 150ms;
+  left: 50px;
+}
+.error .icon {
+  display: inline-block;
+  background-color: red;
+  color: white;
+  border-radius: 6px;
+  margin-right: 4px;
+  width: 20px;
+  height: 20px;
+  text-align: center;
+  font-family: Helvetica Neue, Helvetica, sans-serif;
+  font-weight: bold;
+}
+.overlay {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
 @font-face {
   font-family: 'fabricaregular';
   src: url('assets/fabrica-webfont.eot');

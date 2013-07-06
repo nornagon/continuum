@@ -93,6 +93,28 @@ class View extends ElementWrapper
     (@handlers[ev] ||= []).push fn
     @$el.addEventListener ev, fn
 
+xhr =
+  query: (method, url, data, cb) ->
+    req = new XMLHttpRequest
+    req.onload = ->
+      try
+        cb null, JSON.parse this.responseText
+      catch e
+        cb e
+    req.onerror = ->
+      cb 'network error'
+    req.open method, url, true
+    req.setRequestHeader 'Content-Type', 'application/json'
+    req.send data
+  get: (url, cb) ->
+    this.query 'get', url, undefined, cb
+  post: (url, data, cb) ->
+    this.query 'post', url, JSON.stringify(data), cb
+  put: (url, data, cb) ->
+    this.query 'put', url, JSON.stringify(data), cb
+  delete: (url, cb) ->
+    this.query 'delete', url, undefined, cb
+
 doMonthBounce = no
 
 day = (m) ->
@@ -141,6 +163,70 @@ month = (m) ->
 posForMonth = (m) ->
   left: leftForDay(m)
   top: 40
+
+class NetQueue
+  constructor: ->
+    @queue = []
+    @in_flight = false
+    @retries = 0
+
+  enqueue: (fn) ->
+    console.log 'enqueue'
+    @queue.push fn
+    if not @in_flight
+      @popQueue()
+
+  popQueue: ->
+    if @queue.length
+      @in_flight = true
+      f = @queue.shift()
+      next = (e) =>
+        if e
+          if e is 'network error'
+            @retry f
+          else
+            alert 'wargh error, you should probs reload'
+            console.error e
+          return
+        @retries = 0
+        @success?()
+        @popQueue()
+      f next
+    else
+      @in_flight = false
+
+  retry: (f) ->
+    time = Math.min 30000, Math.pow(2, @retries)*1000
+    time += Math.random()*time*0.5 - time*0.5/2
+    time = Math.max 1000, time
+    @retries++
+    console.log 'retry #'+@retries+' in '+time
+    @failure? time
+    setTimeout =>
+      @queue.unshift f
+      @popQueue()
+    , time
+
+queue = new NetQueue
+
+queue.success = ->
+  errorMessage.fadeOut()
+
+queue.failure = ->
+  errorMessage.fadeIn()
+
+class ErrorView extends View
+  render: ->
+    e = tag '.error', "Error saving data, retrying..."
+    e.style.bottom = '-35px'
+    e.insertBefore tag('.icon', '!'), e.firstChild
+    e
+  fadeIn: ->
+    @$el.style.bottom = '35px'
+  fadeOut: ->
+    @$el.style.bottom = '-35px'
+
+errorMessage = new ErrorView
 
 class AnnotationView extends View
   constructor: (@data) ->
@@ -193,66 +279,21 @@ class AnnotationView extends View
       @remove()
 
   delete: ->
-    @enqueue (next) =>
+    queue.enqueue (next) =>
       if @data._id
         xhr.delete '/annotations/'+@data._id, (err, d) =>
-          if err
-            alert 'wargh error, you should probs reload'
-            console.error err
-            return
-          next()
+          next err
 
   save: ->
-    @enqueue (next) =>
+    queue.enqueue (next) =>
       if @data._id
         xhr.put '/annotations/'+@data._id, @data, (err, d) =>
-          if err
-            alert 'wargh error, you should probs reload'
-            console.error err
-            return
-          next()
+          next err
       else
         xhr.post '/annotations', @data, (err, d) =>
-          if err
-            alert 'wargh error, you should probs reload'
-            console.error err
-            return
+          return next err if err
           @data._id = d.id
           next()
-
-  enqueue: (fn) ->
-    @queue ?= []
-    @queue.push fn
-    if not @inFlight
-      @popQueue()
-
-  popQueue: ->
-    if @queue.length
-      @inFlight = true
-      f = @queue.shift()
-      f => @popQueue()
-    else
-      @inFlight = false
-
-xhr =
-  query: (method, url, data, cb) ->
-    req = new XMLHttpRequest
-    req.onload = ->
-      try
-        cb null, JSON.parse this.responseText
-      catch e
-        cb e
-    req.open method, url, true
-    req.setRequestHeader 'Content-Type', 'application/json'
-    req.send data
-  get: (url, cb) ->
-    this.query 'get', url, undefined, cb
-  post: (url, data, cb) ->
-    this.query 'post', url, JSON.stringify(data), cb
-  put: (url, data, cb) ->
-    this.query 'put', url, JSON.stringify(data), cb
-  delete: (url, cb) ->
-    this.query 'delete', url, undefined, cb
 
 xhr.get '/annotations.json', (err, anns) ->
   throw err if err
@@ -268,36 +309,6 @@ updateAnnotation = (ann, cb) ->
 
 annotation = (data) ->
   new AnnotationView data
-
-days = new Layer '.days'
-days.setPos top: 300 + (if doMonthBounce then 100 else 0)
-months = new Layer
-annotations = new Layer
-annotations.setPos top: 300 + (if doMonthBounce then 100 else 0)
-
-calendar.appendChild l.$el for l in [
-  annotations
-  days
-  months
-]
-
-origin = moment().startOf('day')
-sx = 0
-
-setScrollX = (x) ->
-  sx = x
-  calendar.style.webkitTransform = 'translateX('+-sx+'px)'
-
-setScrollX leftForDay(moment(origin).startOf('week').subtract('week', 1))
-
-leftmostReifiedDay = moment(origin)
-numReifiedDays = 0
-reifyDay = (mom) ->
-  d = day(mom)
-  d.setPos posForDay(mom)
-  d.on 'click', ->
-    newAnnotation mom
-  d
 
 minHeightForAnnotation = (a) ->
   minY = a.$el.offsetTop + 150
@@ -336,6 +347,39 @@ newAnnotation = (mom) ->
   minY = minHeightForAnnotation a
   setTimeout ->
     a.setHeight minY
+
+days = new Layer '.days'
+days.setPos top: 300 + (if doMonthBounce then 100 else 0)
+months = new Layer '.months'
+annotations = new Layer '.annotations'
+annotations.setPos top: 300 + (if doMonthBounce then 100 else 0)
+overlay = new Layer '.overlay'
+overlay.add errorMessage
+
+calendar.appendChild l.$el for l in [
+  annotations
+  days
+  months
+]
+document.body.appendChild overlay.$el
+
+origin = moment().startOf('day')
+sx = 0
+
+setScrollX = (x) ->
+  sx = x
+  calendar.style.webkitTransform = 'translateX('+-sx+'px)'
+
+setScrollX leftForDay(moment(origin).startOf('week').subtract('week', 1))
+
+leftmostReifiedDay = moment(origin)
+numReifiedDays = 0
+reifyDay = (mom) ->
+  d = day(mom)
+  d.setPos posForDay(mom)
+  d.on 'click', ->
+    newAnnotation mom
+  d
 
 
 updateReifiedDays = ->
