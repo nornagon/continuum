@@ -444,7 +444,7 @@ updateReified()
 
 window.onmousewheel = (e) ->
   e.preventDefault()
-  setScrollX sx-e.wheelDeltaX
+  setScrollX sx-e.wheelDelta
   updateReified()
 
 window.onresize = ->
