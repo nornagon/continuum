@@ -96,12 +96,17 @@ class View extends ElementWrapper
 xhr =
   query: (method, url, data, cb) ->
     req = new XMLHttpRequest
+    req.timeout = 1000
     req.onload = ->
       try
         cb null, JSON.parse this.responseText
       catch e
         cb e
     req.onerror = ->
+      cb 'network error'
+    req.ontimeout = ->
+      cb 'network error'
+    req.onabort = ->
       cb 'network error'
     req.open method, url, true
     req.setRequestHeader 'Content-Type', 'application/json'
