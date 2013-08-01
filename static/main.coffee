@@ -337,6 +337,9 @@ addAnnotation = (data) ->
   a
 
 newAnnotation = (mom) ->
+  for existing_a in annotations.views
+    if existing_a.moment.isSame(mom, 'day')
+      return existing_a.edit()
   a = addAnnotation text: '', date: mom.format('YYYY-MM-DD')
   a.setHeight 0
   a.edit()
