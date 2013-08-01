@@ -304,13 +304,6 @@ xhr.get '/annotations.json', (err, anns) ->
   for a in anns
     addAnnotation a
 
-createAnnotation = (ann, cb) ->
-  xhr.post '/annotations', ann, (err, data) ->
-    return cb err if err
-
-updateAnnotation = (ann, cb) ->
-  xhr.put '/annotations/'+ann._id, (err, data) ->
-
 annotation = (data) ->
   new AnnotationView data
 
