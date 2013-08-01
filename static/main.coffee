@@ -289,13 +289,17 @@ class AnnotationView extends View
           next err
 
   save: ->
+    @content.style.color = '#bbb'
     queue.enqueue (next) =>
       if @data._id
         xhr.put '/annotations/'+@data._id, @data, (err, d) =>
-          next err
+          return next err if err
+          @content.style.color = ''
+          next()
       else
         xhr.post '/annotations', @data, (err, d) =>
           return next err if err
+          @content.style.color = ''
           @data._id = d.id
           next()
 
