@@ -1,7 +1,21 @@
-main_layer = document.getElementById('calendar')
+# TODO:
+# - google calendar/ics integration
+# - multi-day events
+#   - create by click+drag
+#   - edit by drag edges
+#   - delete by delete text+enter
+#   - clever stacking
+# - undo
+# - refactor and browserify
+# - more clever event placement
+# - notes in the corner
+# - lazy-reify annotations
+# - (later) lazy-xhr annotations
+
+doMonthBounce = no
 
 tag = (name, text) ->
-  parts = name.split /(?=[.#])/ # why yes, i am a ninja
+  parts = name.split /(?=[.#])/
   tagName = "div"
   classes = []
   id = undefined
@@ -93,51 +107,8 @@ class View extends ElementWrapper
     (@handlers[ev] ||= []).push fn
     @$el.addEventListener ev, fn
 
-xhr =
-  query: (method, url, data, cb) ->
-    req = new XMLHttpRequest
-    req.timeout = 1000
-    req.onload = ->
-      try
-        cb null, JSON.parse this.responseText
-      catch e
-        cb e
-    req.onerror = ->
-      cb 'network error'
-    req.ontimeout = ->
-      cb 'network error'
-    req.onabort = ->
-      cb 'network error'
-    req.open method, url, true
-    req.setRequestHeader 'Content-Type', 'application/json'
-    req.send data
-  get: (url, cb) ->
-    this.query 'get', url, undefined, cb
-  post: (url, data, cb) ->
-    this.query 'post', url, JSON.stringify(data), cb
-  put: (url, data, cb) ->
-    this.query 'put', url, JSON.stringify(data), cb
-  delete: (url, cb) ->
-    this.query 'delete', url, undefined, cb
 
-doMonthBounce = no
-
-day = (m) ->
-  v = new View ->
-    @isToday = m.isSame(moment(), 'day')
-    if @$el
-      if @isToday
-        @$el.classList.add 'today'
-      else
-        @$el.classList.remove 'today'
-      return @$el
-    d = tag '.day', m.format('ddd')
-    num = d.appendChild tag '.number', m.format('D')
-    if @isToday
-      d.classList.add 'today'
-    d
-  v.moment = m
-  v
+## GEOMETRY ##
 
 dayForWorldX = (x) ->
   moment(origin).add('days', x/50|0)
@@ -162,12 +133,12 @@ posForDay = (m) ->
   left: leftForDay(m)
   top: topForDay(m)
 
-month = (m) ->
-  new View ->
-    tag '.month', m.format('MMMM YYYY')
 posForMonth = (m) ->
   left: leftForDay(m)
   top: 40
+
+
+## NET ##
 
 class NetQueue
   constructor: ->
@@ -211,13 +182,32 @@ class NetQueue
       @popQueue()
     , time
 
-queue = new NetQueue
-
-queue.success = ->
-  errorMessage.fadeOut()
-
-queue.failure = ->
-  errorMessage.fadeIn()
+xhr =
+  query: (method, url, data, cb) ->
+    req = new XMLHttpRequest
+    req.timeout = 1000
+    req.onload = ->
+      try
+        cb null, JSON.parse this.responseText
+      catch e
+        cb e
+    req.onerror = ->
+      cb 'network error'
+    req.ontimeout = ->
+      cb 'network error'
+    req.onabort = ->
+      cb 'network error'
+    req.open method, url, true
+    req.setRequestHeader 'Content-Type', 'application/json'
+    req.send data
+  get: (url, cb) ->
+    this.query 'get', url, undefined, cb
+  post: (url, data, cb) ->
+    this.query 'post', url, JSON.stringify(data), cb
+  put: (url, data, cb) ->
+    this.query 'put', url, JSON.stringify(data), cb
+  delete: (url, cb) ->
+    this.query 'delete', url, undefined, cb
 
 class ErrorView extends View
   render: ->
@@ -231,6 +221,38 @@ class ErrorView extends View
     @$el.style.bottom = '-35px'
 
 errorMessage = new ErrorView
+
+queue = new NetQueue
+
+queue.success = ->
+  errorMessage.fadeOut()
+
+queue.failure = ->
+  errorMessage.fadeIn()
+
+
+## VIEWS ##
+
+day = (m) ->
+  v = new View ->
+    @isToday = m.isSame(moment(), 'day')
+    if @$el
+      if @isToday
+        @$el.classList.add 'today'
+      else
+        @$el.classList.remove 'today'
+      return @$el
+    d = tag '.day', m.format('ddd')
+    num = d.appendChild tag '.number', m.format('D')
+    if @isToday
+      d.classList.add 'today'
+    d
+  v.moment = m
+  v
+
+month = (m) ->
+  new View ->
+    tag '.month', m.format('MMMM YYYY')
 
 class AnnotationView extends View
   constructor: (@data) ->
@@ -303,11 +325,6 @@ class AnnotationView extends View
           @data._id = d.id
           next()
 
-xhr.get '/annotations.json', (err, anns) ->
-  throw err if err
-  for a in anns
-    addAnnotation a
-
 annotation = (data) ->
   new AnnotationView data
 
@@ -352,6 +369,11 @@ newAnnotation = (mom) ->
   setTimeout ->
     a.setHeight minY
 
+
+## INITIALIZATION ##
+
+calendar = document.getElementById('calendar')
+
 days = new Layer '.days'
 days.setPos top: 300 + (if doMonthBounce then 100 else 0)
 months = new Layer '.months'
@@ -366,6 +388,21 @@ calendar.appendChild l.$el for l in [
   months
 ]
 document.body.appendChild overlay.$el
+
+document.addEventListener 'keydown', (e) ->
+  return if document.activeElement.tagName isnt 'BODY'
+  if e.which == 'T'.charCodeAt(0)
+    setScrollX leftForDay(moment(origin).startOf('week').subtract('week', 1))
+    updateReified()
+, false
+
+xhr.get '/annotations.json', (err, anns) ->
+  throw err if err
+  for a in anns
+    addAnnotation a
+
+
+## SCROLLING ##
 
 origin = moment().startOf('day')
 sx = 0
@@ -384,7 +421,6 @@ reifyDay = (mom) ->
   d.on 'click', ->
     newAnnotation mom
   d
-
 
 updateReifiedDays = ->
   # TODO: total re-render if overlap is small
@@ -457,12 +493,8 @@ window.onscroll = (e) ->
   updateReified()
   e.preventDefault()
 
-document.addEventListener 'keydown', (e) ->
-  return if document.activeElement.tagName isnt 'BODY'
-  if e.which == 'T'.charCodeAt(0)
-    setScrollX leftForDay(moment(origin).startOf('week').subtract('week', 1))
-    updateReified()
-, false
+
+## TIMERS ##
 
 everyMinute = ->
   for d in days.views
