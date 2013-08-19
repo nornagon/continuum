@@ -116,36 +116,6 @@ class View extends ElementWrapper
     @$el.addEventListener ev, fn
 
 
-## GEOMETRY ##
-
-dayForWorldX = (x) ->
-  moment(origin).add('days', x/50|0)
-
-topForDay = (m) ->
-  m = moment(m)
-  i = m.day()
-  v = if 0 < i < 6
-    Math.round(15 - Math.sin(i/6 * Math.PI) * 80)
-  else 0
-  if doMonthBounce
-    j = m.date()/m.daysInMonth()
-    monthBounce = -Math.sin(j*Math.PI) * 150
-    v + monthBounce
-  else
-    v
-
-leftForDay = (m) ->
-  m.diff(origin, 'day')*50
-
-posForDay = (m) ->
-  left: leftForDay(m)
-  top: topForDay(m)
-
-posForMonth = (m) ->
-  left: leftForDay(m)
-  top: 40
-
-
 ## NET ##
 
 class NetQueue
@@ -237,6 +207,36 @@ queue.success = ->
 
 queue.failure = ->
   errorMessage.fadeIn()
+
+
+## GEOMETRY ##
+
+dayForWorldX = (x) ->
+  moment(origin).add('days', Math.floor(x/50))
+
+topForDay = (m) ->
+  m = moment(m)
+  i = m.day()
+  v = if 0 < i < 6
+    Math.round(15 - Math.sin(i/6 * Math.PI) * 80)
+  else 0
+  if doMonthBounce
+    j = m.date()/m.daysInMonth()
+    monthBounce = -Math.sin(j*Math.PI) * 150
+    v + monthBounce
+  else
+    v
+
+leftForDay = (m) ->
+  m.diff(origin, 'day')*50
+
+posForDay = (m) ->
+  left: leftForDay(m)
+  top: topForDay(m)
+
+posForMonth = (m) ->
+  left: leftForDay(m)
+  top: 40
 
 
 ## VIEWS ##
