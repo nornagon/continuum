@@ -101,6 +101,7 @@ app.post '/annotations', session, restrict, (req, res, next) ->
     user_id: req.session.user._id
     text: req.body.text
     date: req.body.date
+    span: req.body.span
   }, (err, d) ->
     return res.end JSON.stringify err if err
     res.end JSON.stringify d
@@ -114,6 +115,7 @@ app.put '/annotations/:id', session, restrict, (req, res, next) ->
       user_id: req.session.user._id
       text: req.body.text
       date: req.body.date
+      span: req.body.span
     }, (err, d) ->
       return res.end JSON.stringify err if err
       res.end JSON.stringify d

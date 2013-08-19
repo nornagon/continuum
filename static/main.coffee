@@ -379,8 +379,8 @@ newAnnotation = (mom) ->
 
 class SpanningAnnotationView extends View
   constructor: (@data) ->
-    @from_mom = moment @data.from_date, 'YYYY-MM-DD'
-    @to_mom = moment @data.to_date, 'YYYY-MM-DD'
+    @from_mom = moment @data.date, 'YYYY-MM-DD'
+    @to_mom = moment(@from_mom).add 'day', @data.span
     super()
   zoneForEvent: (ev) ->
     {width} = @getSize()
@@ -441,7 +441,10 @@ class SpanningAnnotationView extends View
     {width} = @getSize()
     @from_mom = dayForWorldX left
     @to_mom = dayForWorldX left+width
+    @data.date = @from_mom.format('YYYY-MM-DD')
+    @data.span = @to_mom.diff(@from_mom, 'day')
     @refresh()
+    @save()
 
   edit: ->
     return if @editing
@@ -473,6 +476,19 @@ class SpanningAnnotationView extends View
     @content.textContent = value
 
   save: ->
+    @content.style.color = '#bbb'
+    queue.enqueue (next) =>
+      if @data._id
+        xhr.put '/annotations/'+@data._id, @data, (err, d) =>
+          return next err if err
+          @content.style.color = ''
+          next()
+      else
+        xhr.post '/annotations', @data, (err, d) =>
+          return next err if err
+          @content.style.color = ''
+          @data._id = d.id
+          next()
   delete: ->
   fadeOut: ->
 
@@ -512,13 +528,10 @@ document.addEventListener 'keydown', (e) ->
 xhr.get '/annotations.json', (err, anns) ->
   throw err if err
   for a in anns
-    addAnnotation a
-
-addSpanningAnnotation {
-  from_date: moment().format 'YYYY-MM-DD'
-  to_date: moment().add('day', 3).format 'YYYY-MM-DD'
-  text: 'hi there'
-}
+    if a.span?
+      addSpanningAnnotation a
+    else
+      addAnnotation a
 
 ## SCROLLING ##
 
