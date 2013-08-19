@@ -72,6 +72,13 @@ html, body { margin: 0; }
   white-space: pre-wrap;
 }
 
+.spanning-annotation {
+  position: absolute;
+  background: hsla(0,0%,0%,0.1);
+  padding: 0 3px;
+  box-sizing: border-box;
+}
+
 .error {
   position: fixed;
   color: red;

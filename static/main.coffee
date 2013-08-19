@@ -8,6 +8,7 @@
 # - undo
 # - refactor and browserify
 # - more clever event placement
+#   - at least fix the bug with maxY
 # - notes in the corner
 # - lazy-reify annotations
 # - (later) lazy-xhr annotations
@@ -54,6 +55,13 @@ class ElementWrapper
     if r.width? then @$el.style.width = r.width + 'px'
     if r.height? then @$el.style.height = r.height + 'px'
     return
+
+  getPos: ->
+    left: parseInt getComputedStyle(@$el).left
+    top: parseInt getComputedStyle(@$el).top
+  getSize: ->
+    width: parseInt getComputedStyle(@$el).width
+    height: parseInt getComputedStyle(@$el).height
 
 # Layers contain Views.
 class Layer extends ElementWrapper
@@ -369,6 +377,109 @@ newAnnotation = (mom) ->
   setTimeout ->
     a.setHeight minY
 
+class SpanningAnnotationView extends View
+  constructor: (@data) ->
+    @from_mom = moment @data.from_date, 'YYYY-MM-DD'
+    @to_mom = moment @data.to_date, 'YYYY-MM-DD'
+    super()
+  zoneForEvent: (ev) ->
+    {width} = @getSize()
+    offX = ev.pageX - @$el.getBoundingClientRect().left
+    if offX <= 5
+      'left'
+    else if offX >= width - 5
+      'right'
+  render: ->
+    e = tag '.spanning-annotation'
+    w = 50 * @to_mom.diff(@from_mom, 'days')
+    e.style.width = w + 'px'
+    fp = posForDay @from_mom
+    fp.top = 100
+    fp.left += 25
+    e.style.left = fp.left + 'px'
+    e.style.top = fp.top + 'px'
+    @content = e.appendChild tag '.content'
+    @content.textContent = @data.text
+    e.addEventListener 'mousemove', (ev) =>
+      @$el.style.cursor = switch @zoneForEvent ev
+        when 'left', 'right' then 'ew-resize'
+        else 'default'
+    e.addEventListener 'mousedown', (ev) =>
+      ev.preventDefault()
+      side = @zoneForEvent ev
+      if not side
+        return @edit()
+      document.documentElement.style.cursor = 'ew-resize'
+      grabbedX = ev.pageX + sx
+      window.addEventListener 'mousemove', resize = (ev) =>
+        nowX = ev.pageX + sx
+        dx = nowX - grabbedX
+        grabbedX = nowX
+        if side is 'left'
+          {width} = @getSize()
+          {left} = @getPos()
+          @setPos left: left + dx
+          @setSize width: width - dx
+        else
+          {width} = @getSize()
+          @setSize width: width + dx
+        ev.preventDefault()
+        ev.stopPropagation()
+      , true
+      window.addEventListener 'mouseup', done = (ev) =>
+        ev.preventDefault()
+        ev.stopPropagation()
+        document.documentElement.style.cursor = ''
+        window.removeEventListener 'mousemove', resize, true
+        window.removeEventListener 'mouseup', done
+        window.removeEventListener 'blur', done
+        @updated()
+      window.addEventListener 'blur', done
+    e
+  updated: ->
+    {left} = @getPos()
+    {width} = @getSize()
+    @from_mom = dayForWorldX left
+    @to_mom = dayForWorldX left+width
+    @refresh()
+
+  edit: ->
+    return if @editing
+    @editing = true
+    value = @content.textContent
+    @content.textContent = ''
+    @textArea = @content.appendChild tag 'textarea'
+    @textArea.value = value
+    @textArea.style.width = '100%'
+    makeExpandingArea @textArea
+    @textArea.onblur = => @doneEditing()
+    @textArea.addEventListener 'input', =>
+    @textArea.addEventListener 'keydown', (e) =>
+      if e.which is 13 and not e.shiftKey
+        e.preventDefault()
+        @doneEditing()
+    @textArea.focus()
+
+  doneEditing: ->
+    return unless @editing
+    @editing = false
+    value = @data.text = @textArea.value
+    if value.length is 0
+      @delete()
+      @fadeOut()
+      return
+    else
+      @save()
+    @content.textContent = value
+
+  save: ->
+  delete: ->
+  fadeOut: ->
+
+addSpanningAnnotation = (data) ->
+  a = new SpanningAnnotationView data
+  spanning_annotations.add a
+  a
 
 ## INITIALIZATION ##
 
@@ -379,10 +490,12 @@ days.setPos top: 300 + (if doMonthBounce then 100 else 0)
 months = new Layer '.months'
 annotations = new Layer '.annotations'
 annotations.setPos top: 300 + (if doMonthBounce then 100 else 0)
+spanning_annotations = new Layer '.spanning-annotations'
 overlay = new Layer '.overlay'
 overlay.add errorMessage
 
 calendar.appendChild l.$el for l in [
+  spanning_annotations
   annotations
   days
   months
@@ -401,6 +514,11 @@ xhr.get '/annotations.json', (err, anns) ->
   for a in anns
     addAnnotation a
 
+addSpanningAnnotation {
+  from_date: moment().format 'YYYY-MM-DD'
+  to_date: moment().add('day', 3).format 'YYYY-MM-DD'
+  text: 'hi there'
+}
 
 ## SCROLLING ##
 
