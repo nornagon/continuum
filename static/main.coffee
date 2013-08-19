@@ -490,7 +490,16 @@ class SpanningAnnotationView extends View
           @data._id = d.id
           next()
   delete: ->
+    queue.enqueue (next) =>
+      if @data._id
+        xhr.delete '/annotations/'+@data._id, (err, d) =>
+          next err
   fadeOut: ->
+    @$el.style.webkitTransition = '200ms ease-in'
+    @$el.style.width = '0px'
+    @$el.style.overflow = 'hidden'
+    @$el.addEventListener 'webkitTransitionEnd', =>
+      @remove()
 
 addSpanningAnnotation = (data) ->
   a = new SpanningAnnotationView data
