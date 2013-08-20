@@ -74,6 +74,7 @@ html, body { margin: 0; }
 
 .spanning-annotation {
   position: absolute;
+  white-space: pre-wrap;
   background: hsla(0,0%,0%,0.1);
   padding: 0 3px;
   box-sizing: border-box;
