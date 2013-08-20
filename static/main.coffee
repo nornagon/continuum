@@ -241,22 +241,33 @@ posForMonth = (m) ->
 
 ## VIEWS ##
 
-day = (m) ->
-  v = new View ->
-    @isToday = m.isSame(moment(), 'day')
+class DayView extends View
+  constructor: (@moment) -> super()
+  render: ->
+    @isToday = @moment.isSame(moment(), 'day')
     if @$el
       if @isToday
         @$el.classList.add 'today'
       else
         @$el.classList.remove 'today'
       return @$el
-    d = tag '.day', m.format('ddd')
-    num = d.appendChild tag '.number', m.format('D')
+    d = tag '.day', @moment.format('ddd')
+    num = d.appendChild tag '.number', @moment.format('D')
     if @isToday
       d.classList.add 'today'
+    d.addEventListener 'mousedown', (e) =>
+      e.preventDefault()
+      @beginDrag e
     d
-  v.moment = m
-  v
+
+  beginDrag: (e) ->
+    sa = addSpanningAnnotation
+      date: @moment.format('YYYY-MM-DD')
+      span: 0
+      text: ''
+    sa.beginDrag 'right', e
+
+day = (m) -> new DayView m
 
 month = (m) ->
   new View ->
@@ -409,33 +420,37 @@ class SpanningAnnotationView extends View
       side = @zoneForEvent ev
       if not side
         return @edit()
-      document.documentElement.style.cursor = 'ew-resize'
-      grabbedX = ev.pageX + sx
-      window.addEventListener 'mousemove', resize = (ev) =>
-        nowX = ev.pageX + sx
-        dx = nowX - grabbedX
-        grabbedX = nowX
-        if side is 'left'
-          {width} = @getSize()
-          {left} = @getPos()
-          @setPos left: left + dx
-          @setSize width: width - dx
-        else
-          {width} = @getSize()
-          @setSize width: width + dx
-        ev.preventDefault()
-        ev.stopPropagation()
-      , true
-      window.addEventListener 'mouseup', done = (ev) =>
-        ev.preventDefault()
-        ev.stopPropagation()
-        document.documentElement.style.cursor = ''
-        window.removeEventListener 'mousemove', resize, true
-        window.removeEventListener 'mouseup', done
-        window.removeEventListener 'blur', done
-        @updated()
-      window.addEventListener 'blur', done
+      @beginDrag side, ev
     e
+
+  beginDrag: (side, ev) ->
+    document.documentElement.style.cursor = 'ew-resize'
+    grabbedX = ev.pageX + sx
+    window.addEventListener 'mousemove', resize = (ev) =>
+      nowX = ev.pageX + sx
+      dx = nowX - grabbedX
+      grabbedX = nowX
+      if side is 'left'
+        {width} = @getSize()
+        {left} = @getPos()
+        @setPos left: left + dx
+        @setSize width: width - dx
+      else
+        {width} = @getSize()
+        @setSize width: width + dx
+      ev.preventDefault()
+      ev.stopPropagation()
+    , true
+    window.addEventListener 'mouseup', done = (ev) =>
+      ev.preventDefault()
+      ev.stopPropagation()
+      document.documentElement.style.cursor = ''
+      window.removeEventListener 'mousemove', resize, true
+      window.removeEventListener 'mouseup', done
+      window.removeEventListener 'blur', done
+      @updated()
+    window.addEventListener 'blur', done
+
   updated: ->
     {left} = @getPos()
     {width} = @getSize()
