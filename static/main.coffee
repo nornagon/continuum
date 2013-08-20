@@ -328,6 +328,7 @@ class AnnotationView extends View
       if @data._id
         xhr.delete '/annotations/'+@data._id, (err, d) =>
           next err
+      else next()
 
   save: ->
     @content.style.color = '#bbb'
