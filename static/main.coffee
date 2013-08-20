@@ -257,15 +257,35 @@ class DayView extends View
       d.classList.add 'today'
     d.addEventListener 'mousedown', (e) =>
       e.preventDefault()
-      @beginDrag e
+      window.addEventListener 'mousemove', move = (e) =>
+        e.preventDefault()
+        e.stopPropagation()
+        x = e.pageX + sx
+        d = dayForWorldX x
+        if not d.isSame(@moment, 'day')
+          done()
+          @beginDrag()
+      window.addEventListener 'mouseup', done = (e) =>
+        window.removeEventListener 'mousemove', move
+        window.removeEventListener 'mouseup', done, true
+        window.removeEventListener 'blur', done
+        e?.preventDefault()
+        e?.stopPropagation()
+      , true
+      window.addEventListener 'blur', done
+    d.addEventListener 'click', =>
+      newAnnotation @moment
     d
 
-  beginDrag: (e) ->
+  beginDrag: ->
     sa = addSpanningAnnotation
       date: @moment.format('YYYY-MM-DD')
       span: 0
       text: ''
-    sa.beginDrag 'right', e
+    sa.beginDrag 'right'
+    sa._onDragComplete = ->
+      delete sa._onDragComplete
+      sa.edit()
 
 day = (m) -> new DayView m
 
@@ -421,42 +441,37 @@ class SpanningAnnotationView extends View
       side = @zoneForEvent ev
       if not side
         return @edit()
-      @beginDrag side, ev
+      @beginDrag side
     e
 
-  beginDrag: (side, ev) ->
+  beginDrag: (side) ->
     document.documentElement.style.cursor = 'ew-resize'
-    grabbedX = ev.pageX + sx
     window.addEventListener 'mousemove', resize = (ev) =>
-      nowX = ev.pageX + sx
-      dx = nowX - grabbedX
-      grabbedX = nowX
-      if side is 'left'
-        {width} = @getSize()
-        {left} = @getPos()
-        @setPos left: left + dx
-        @setSize width: width - dx
-      else
-        {width} = @getSize()
-        @setSize width: width + dx
       ev.preventDefault()
       ev.stopPropagation()
+      nowX = ev.pageX + sx
+      d = dayForWorldX nowX
+      if side is 'left'
+        @from_mom = d
+      else
+        @to_mom = d
+      @refresh()
     , true
     window.addEventListener 'mouseup', done = (ev) =>
       ev.preventDefault()
       ev.stopPropagation()
       document.documentElement.style.cursor = ''
       window.removeEventListener 'mousemove', resize, true
-      window.removeEventListener 'mouseup', done
+      window.removeEventListener 'mouseup', done, true
       window.removeEventListener 'blur', done
       @updated()
+      @_onDragComplete?()
+    , true
     window.addEventListener 'blur', done
 
   updated: ->
     {left} = @getPos()
     {width} = @getSize()
-    @from_mom = dayForWorldX left
-    @to_mom = dayForWorldX left+width
     @data.date = @from_mom.format('YYYY-MM-DD')
     @data.span = @to_mom.diff(@from_mom, 'day')
     @refresh()
@@ -574,8 +589,6 @@ numReifiedDays = 0
 reifyDay = (mom) ->
   d = day(mom)
   d.setPos posForDay(mom)
-  d.on 'click', ->
-    newAnnotation mom
   d
 
 updateReifiedDays = ->
