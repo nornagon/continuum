@@ -1,6 +1,7 @@
 fs = require 'fs'
 express = require 'express'
 request = require 'request'
+moment = require './static/assets/moment'
 
 config_defaults =
   db: 'couch'
@@ -126,6 +127,46 @@ app.delete '/annotations/:id', session, restrict, (req, res, next) ->
     db.delAnnotation req.params.id, (err, r) ->
       return res.end JSON.stringify err if err
       res.end JSON.stringify r
+
+uuid = ->
+  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace /[xy]/g, (c) ->
+    r = Math.random()*16|0
+    (if c == 'x' then r else (r&0x3|0x8)).toString 16
+
+formatDate = (datetime, offset = new Date().getTimezoneOffset()) ->
+  pad = (n) ->
+    n = parseInt(n)
+    if n < 10 then '0' + n else '' + n
+
+  d = new Date(datetime)
+  d.setUTCMinutes(d.getUTCMinutes() - offset)
+
+  [
+    d.getUTCFullYear()
+    pad(d.getUTCMonth() + 1)
+    pad(d.getUTCDate()) + 'T'
+    pad(d.getUTCHours())
+    pad(d.getUTCMinutes())
+    pad(d.getUTCSeconds())
+  ].join('')
+
+app.get '/calendar/:id.ics', (req, res) ->
+  db.getAnnotationsForUser req.params.id, (err, anns) ->
+    return res.end JSON.stringify ok: no, error: 'no such calendar' if err
+    res.setHeader 'Content-type', 'text/calendar'
+    res.write 'BEGIN:VCALENDAR\n'
+    res.write 'CALSCALE:GREGORIAN\n'
+    res.write 'METHOD:PUBLISH\n'
+    events = for a in anns
+      res.write 'BEGIN:VEVENT\n'
+      res.write 'UID:' + uuid() + '\n'
+      res.write 'DTSTAMP:' + formatDate(new Date()) + '\n'
+      res.write 'DTSTART;VALUE=DATE:' + moment(a.date).format('YYYYMMDD') + '\n'
+      res.write 'DTEND;VALUE=DATE:' + moment(a.date).add('d',1).format('YYYYMMDD') + '\n'
+      res.write 'SUMMARY:' + a.text.replace(/\n/,'\\n') + '\n'
+      res.write 'END:VEVENT\n'
+    res.end 'END:VCALENDAR\n'
+    res.end JSON.stringify anns
 
 port = process.argv[2] ? 8888
 app.listen port
