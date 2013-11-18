@@ -163,7 +163,7 @@ app.get '/calendar/:id.ics', (req, res) ->
       res.write 'DTSTAMP:' + formatDate(new Date()) + '\n'
       res.write 'DTSTART;VALUE=DATE:' + moment(a.date).format('YYYYMMDD') + '\n'
       res.write 'DTEND;VALUE=DATE:' + moment(a.date).add('d',1).format('YYYYMMDD') + '\n'
-      res.write 'SUMMARY:' + a.text.replace(/\n/,'\\n') + '\n'
+      res.write 'SUMMARY:' + a.text.replace(/\n/g,'\\n') + '\n'
       res.write 'END:VEVENT\n'
     res.end 'END:VCALENDAR\n'
     res.end JSON.stringify anns
