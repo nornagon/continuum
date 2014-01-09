@@ -163,7 +163,7 @@ class NetQueue
 xhr =
   query: (method, url, data, cb) ->
     req = new XMLHttpRequest
-    req.timeout = 1000
+    req.timeout = 5000
     req.onload = ->
       try
         cb null, JSON.parse this.responseText
