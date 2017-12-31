@@ -80,6 +80,12 @@ html, body { margin: 0; }
   box-sizing: border-box;
   min-height: 20px;
 }
+.spanning-annotation.striped {
+  background-image: linear-gradient(-45deg,
+  hsla(0,0%,0%,0.1) 25%, hsla(0,0%,0%,0.2) 25%, hsla(0,0%,0%,0.2) 50%,
+  hsla(0,0%,0%,0.1) 50%, hsla(0,0%,0%,0.1) 75%, hsla(0,0%,0%,0.2) 75%, hsla(0,0%,0%,0.2));
+  background-size:25px 25px;
+}
 
 .error {
   position: fixed;

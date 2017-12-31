@@ -275,6 +275,8 @@ class DayView extends View
       window.addEventListener 'blur', done
     d.addEventListener 'click', =>
       newAnnotation @moment
+    d.addEventListener 'touchend', =>
+      newAnnotation @moment
     d
 
   beginDrag: ->
@@ -539,7 +541,7 @@ addSpanningAnnotation = (data) ->
 
 ## INITIALIZATION ##
 
-calendar = document.getElementById('calendar')
+calendar = document.body.appendChild tag 'div#calendar'
 
 days = new Layer '.days'
 days.setPos top: 300 + (if doMonthBounce then 100 else 0)
@@ -593,21 +595,23 @@ reifyDay = (mom) ->
 
 updateReifiedDays = ->
   # TODO: total re-render if overlap is small
-  while leftForDay(leftmostReifiedDay) > sx
-    m = moment(leftmostReifiedDay).add('days', -1)
-    d = reifyDay m
-    days.addBegin d
-    leftmostReifiedDay = m
-    numReifiedDays++
+  if leftForDay(leftmostReifiedDay) > sx
+    while leftForDay(leftmostReifiedDay) > sx - 250
+      m = moment(leftmostReifiedDay).add('days', -1)
+      d = reifyDay m
+      days.addBegin d
+      leftmostReifiedDay = m
+      numReifiedDays++
   while leftForDay(moment(leftmostReifiedDay).add('day', numReifiedDays)) < sx+innerWidth
     m = moment(leftmostReifiedDay).add('days', numReifiedDays)
     d = reifyDay m
     days.add d
     numReifiedDays++
-  while leftForDay(moment(leftmostReifiedDay).add('day', 1)) < sx
-    days.views[0].remove()
-    numReifiedDays--
-    leftmostReifiedDay.add('day', 1)
+  if leftForDay(moment(leftmostReifiedDay).add('day', 1)) < sx
+    while leftForDay(moment(leftmostReifiedDay).add('day', 1)) < sx - 250
+      days.views[0].remove()
+      numReifiedDays--
+      leftmostReifiedDay.add('day', 1)
   while leftForDay(moment(leftmostReifiedDay).add('day', numReifiedDays-1)) > sx + innerWidth
     days.views[days.views.length-1].remove()
     numReifiedDays--
@@ -662,6 +666,68 @@ window.onscroll = (e) ->
   updateReified()
   e.preventDefault()
 
+
+touchHistory = []
+touchStart = undefined
+scrolling = false
+
+window.addEventListener 'touchstart', (e) ->
+  e.preventDefault()
+  e.stopPropagation()
+  touchStart = {timeStamp: e.timeStamp, touches: (clientX:t.clientX,clientY:t.clientY for t in e.touches)}
+  stopGlide()
+
+window.addEventListener 'touchmove', (e) ->
+  e.preventDefault()
+  {clientX:x, clientY:y} = e.touches[0]
+  dx = touchStart.touches[0].clientX - x
+  dy = touchStart.touches[0].clientY - y
+  if not scrolling
+    if Math.abs(dx) >= 10 or Math.abs(dy) >= 10
+      scrolling = true
+      touchHistory = [{x, y, timeStamp:e.timeStamp}]
+      return
+  if scrolling
+    e.stopPropagation()
+    dx = touchHistory[0].x - x
+    setScrollX sx+dx
+    touchHistory.unshift {x, y, timeStamp:e.timeStamp}
+    touchHistory = touchHistory.filter (x) -> e.timeStamp - x.timeStamp <= 100
+    updateReified()
+
+window.addEventListener 'touchend', (e) ->
+  return unless scrolling
+  e.preventDefault()
+
+  touchHistory = touchHistory.filter (x) -> e.timeStamp - x.timeStamp <= 100
+  if touchHistory.length
+    dt = e.timeStamp - touchHistory[touchHistory.length-1].timeStamp
+    dx = e.changedTouches[0].clientX - touchHistory[touchHistory.length-1].x
+    velocity = dx/dt # in px/s
+    if Math.abs(velocity) >= 1
+      glide -velocity
+  touchHistory = []
+  touchStart = undefined
+  scrolling = false
+
+glideAnim = undefined
+glide = (vel) ->
+  lastFrame = Date.now()
+  glideAnim = webkitRequestAnimationFrame f = ->
+    glideAnim = webkitRequestAnimationFrame f
+    now = Date.now()
+    dt = (now - lastFrame)
+    lastFrame = now
+    return if dt == 0
+    dx = vel * dt
+    vel *= 0.95
+    if Math.abs(vel) < 0.01
+      stopGlide()
+    console.log dt/1000, vel
+    setScrollX sx+dx
+    updateReified()
+stopGlide = ->
+  webkitCancelAnimationFrame glideAnim if glideAnim
 
 ## TIMERS ##
 
