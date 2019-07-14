@@ -4,7 +4,7 @@ request = require 'request'
 moment = require './static/assets/moment'
 
 config_defaults =
-  db: 'couch'
+  db: 'postgres'
   audience: 'http://localhost:8888'
   secret: require('crypto').randomBytes(64).toString()
 
