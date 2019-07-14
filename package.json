@@ -7,19 +7,15 @@
   "author": "Jeremy Apthorp <nornagon@nornagon.net>",
   "dependencies": {
     "consolidate": "*",
-    "cradle": "*",
     "express": "~3.x",
-    "level": "*",
     "passport": "^0.4.0",
     "pg": "^7.11.0",
     "request": "*",
-    "toffee": "*"
+    "toffee": "*",
+    "coffeescript": "^2.4.1"
   },
   "scripts": {
     "install": "coffee -c static",
     "start": "coffee server.coffee"
-  },
-  "devDependencies": {
-    "coffeescript": "^2.4.1"
   }
 }
