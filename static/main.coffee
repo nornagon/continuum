@@ -66,9 +66,12 @@ class ElementWrapper
 # Layers contain Views.
 class Layer extends ElementWrapper
   constructor: (className = '') ->
+    super()
     @views = []
     @$el = tag className + '.layer'
   add: (view) ->
+    if !view.$el
+      view.$el = view.render()
     @views.push view
     view.layer = @
     @$el.appendChild view.$el
@@ -97,9 +100,10 @@ class Layer extends ElementWrapper
 # generates it.
 class View extends ElementWrapper
   constructor: (render) ->
+    super()
     @render = render if render?
     @handlers = {}
-    @$el = @render()
+    #@$el = @render()
   refresh: ->
     newEl = @render()
     if newEl isnt @$el
@@ -289,21 +293,26 @@ class DayView extends View
       delete sa._onDragComplete
       sa.edit()
 
-day = (m) -> new DayView m
+day = (m) ->
+  v = new DayView m
+  v.$el = v.render()
+  v
 
 month = (m) ->
-  new View ->
+  v = new View ->
     tag '.month', m.format('MMMM YYYY')
+  v.$el = v.render()
+  v
 
 class AnnotationView extends View
   constructor: (@data) ->
     super()
-    @content.textContent = @data.text
   render: ->
     e = tag '.annotation'
     @spacer = e.appendChild tag 'div'
     @spacer.style.width = '0px'
     @content = e.appendChild tag '.content'
+    @content.textContent = @data.text
     @content.onclick = =>
       @edit()
     e
@@ -368,7 +377,9 @@ class AnnotationView extends View
           next()
 
 annotation = (data) ->
-  new AnnotationView data
+  v = new AnnotationView data
+  v.$el = v.render()
+  v
 
 minHeightForAnnotation = (a) ->
   minY = a.$el.offsetTop + 150
@@ -413,9 +424,9 @@ newAnnotation = (mom) ->
 
 class SpanningAnnotationView extends View
   constructor: (@data) ->
+    super()
     @from_mom = moment @data.date, 'YYYY-MM-DD'
     @to_mom = moment(@from_mom).add 'day', @data.span
-    super()
   zoneForEvent: (ev) ->
     {width} = @getSize()
     offX = ev.pageX - @$el.getBoundingClientRect().left
